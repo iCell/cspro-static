@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>database on CS Pro</title>
+    <link>https://cspro.xyz/tags/database/</link>
+    <description>Recent content in database on CS Pro</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>cn</language>
+    <copyright>&amp;copy; &lt;a href=&#34;https://github.com/iCell&#34;&gt;iCell&lt;/a&gt; 2020</copyright>
+    <lastBuildDate>Tue, 10 Mar 2020 23:55:34 +0900</lastBuildDate>
+    
+	<atom:link href="https://cspro.xyz/tags/database/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>数据库中数据的组织形式</title>
+      <link>https://cspro.xyz/database/1/</link>
+      <pubDate>Tue, 10 Mar 2020 23:55:34 +0900</pubDate>
+      
+      <guid>https://cspro.xyz/database/1/</guid>
+      <description>&lt;p&gt;数据库无疑是负责数据存储和管理的，那么数据的存储媒介就作为整个数据库中最重要的一个组件存在，它的性能以及管理数据的方式直接决定了整个数据库的性能。绝大部分的数据库管理系统（Database Management System）都是使用磁盘作为存储介质，而面对着海量的数据以及给定的成本，不能够一味地使用性能最好的存储媒介，比如 HDD 可以存储的数据量很大但是 IO 很慢，而 DRAM 或者 CPU Caches 的数据存取速度极快，但是使用成本特别高且它们是数据易失的，因此我们必须要在性能和成本之间寻找到平衡。本文通过介绍数据库中数据的组织方式，并以此利用局部性和多级别存储来加快数据的存取速度。&lt;/p&gt;</description>
+    </item>
+    
+  </channel>
+</rss>
