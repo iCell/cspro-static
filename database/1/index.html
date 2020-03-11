@@ -66,13 +66,13 @@
 	birthday DATE;
 );
 </code></pre></div><figure class="full">
-    <img src="https://raw.githubusercontent.com/iCell/cspro-static/master/images/database-1-1.png?raw=true"/> 
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-1-1.png"/> 
 </figure>
 
 <p>对于大部分机器来说，由于内存对齐的关系，一般要求数据所占字节数的大小为 4 或者 8 的倍数，这样有利于数据的访问和管理。在上述例子中我们假设所有的 field 所占用字节数需要为 4 的倍数，因此图中各个 field 占用的实际存储大小都要比实际声明时的大小要多或者刚刚好，这样是为了对齐而增加的无用空间。另外，记录的 header 中所存储的元数据会包含该条记录中的各种信息，比如说该记录的长度、schema 信息、创建和修改时间或一些表示状态的 flag 等。对每个 field 的定位可以直接通过 schema 信息来获取到当前 field 的偏移量。</p>
 <p>上述的例子中的每个 field 都是定长的，这种定长的记录在插入和删除时都是比较容易管理和实现的，但是我们总会遇到变长 field 的情况出现。当一条记录有一个或者多个变长的 field 存在时，我们为了更高效地对数据进行组织，会选择将所有定长的 field 放在 record 排布区域的前方，而将所有变长 field 放置于后方。</p>
 <figure class="full">
-    <img src="https://raw.githubusercontent.com/iCell/cspro-static/master/images/database-1-2.png?raw=true"/> 
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-1-2.png"/> 
 </figure>
 
 <p>比如仍然用上述 <code>MovieStar</code> 举例，但不同的是， <code>name</code> 和 <code>address</code> 为变长的，此时可以将其位置放于其他 field 之后，只是这样要在 header 中增加一个指针来指向后面变长 field 的位置，配合这个指针以及 schema 信息就可以定位到变长的 field 位置。另外，在上述例子中，<code>name</code> 虽然是变长的，但是不需要在 header 中增加指向它的指针，因为 <code>name</code> 之前的 field 都是定长的，所以根据 schema 信息配合 <code>address</code> 的指针就可以定位 <code>name</code> 的位置以及长度。</p>
@@ -91,13 +91,13 @@
 <h4 id="多条记录在-page-中的存储形式">多条记录在 page 中的存储形式</h4>
 <p>如果 page 内的数据都是定长的，我们自然很好管理，可以直接通过以尾部追加（append）的形式一条一条地添加数据，但这样做很明显会面临一堆问题。</p>
 <figure class="full">
-    <img src="https://raw.githubusercontent.com/iCell/cspro-static/master/images/database-1-3.png?raw=true"/> 
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-1-3.png"/> 
 </figure>
 
 <p>比如上图中的组织方式，如果都是定长（fixed length）的记录，那很简单，数据直接追加到 page 尾部，header 中也只需要记录该 page 内的 record 个数即可，这样的话如果删除一条数据腾出空间，下一次新数据进来时直接填充上一次删除腾出来的空间即可，因为长度都是一致的。但是现实状况总是很残酷，我们总会遇到变长（variable length）的记录，如上图右边所示，我们将第一条和第三条数据删除之后，剩下两块不连续的空间。此时，我们需要新增一条跟之前不同长度的数据，此时就完全不能利用之前删除数据腾出来的空间了。</p>
 <p>所以如何更有效地组织 page 内数据的方式，我们使用一种称为 slotted page（分槽的页面组织形式），在 page 的 header 中，除了记录 record 个数外，还会记录各个 record 的位置和大小，如下图所示：</p>
 <figure class="full">
-    <img src="https://raw.githubusercontent.com/iCell/cspro-static/master/images/database-1-4.png?raw=true"/> 
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-1-4.png"/> 
 </figure>
 
 <p>采用这种方式，所有的记录会从尾部开始进行连续排列，当有新的记录插入时，会在空闲空间的尾部为其分配空间，并在 header 中添加该记录的大小和位置信息。采用此种方式，各个记录可以随意在 page 中移动，只需更改 header 中的位置信息即可，这样的话也可以允许一条记录跨 page 进行存储，只需要将 header 的位置信息标记为 forward address，也就是更改位置引用即可。另外，在删除数据时，我们也可以选择是否对数据进行真正的删除，因为将位置信息标记为已删除也可以代表该条 record 已经删除。</p>
@@ -105,7 +105,7 @@
 <p>除了要进行多条记录的存储外，log 日志的存储也是很常见的情况，在记录日志的情况下，往往只记录对数据库的操作行为，比如插入、删除了哪条数据，对怎样的数据做了什么样的更新。MySQL 中的 binlog 就是一种类似的使用场景。</p>
 <p>对于此类情况，page 也仅仅是以尾部追加的形式将操作行为追加到 page 的尾部，因为仅仅是 append，所以写入数据的速度非常快。但是在读取的时候，就需要从 page 中顺序读取所有行为进行 replay（重放）来还原出最终的数据内容。</p>
 <figure class="full">
-    <img src="https://raw.githubusercontent.com/iCell/cspro-static/master/images/database-1-5.png?raw=true"/> 
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-1-5.png"/> 
 </figure>
 
 <p>因为读取操作需要在所有操作行为中进行 replay，所以若要加速数据读取速度，可以通过在一些位置增加索引，然后通过索引缩短 replay 的时间，也可以对所有的内容进行压缩，减少 replay 需要访问的数据个数。</p>
@@ -115,7 +115,7 @@
 <p>局部性：对一数据结构中的数据进行访问时，不同的操作之间具有很强的相关性，之前被访问过的元素很有可能在之后被再次访问，将被访问的下一个元素的位置也有可能就在之前被访问元素的位置附近。</p>
 </blockquote>
 <figure class="full">
-    <img src="https://raw.githubusercontent.com/iCell/cspro-static/master/images/database-1-6.png?raw=true"/> 
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-1-6.png"/> 
 </figure>
 
 <p>但是因为内存大小的限制，不太可能每次获取磁盘数据时都能够一次性获取足够多的 page，因此使用 Buffer Pool（缓冲池）就是一个非常行之有效的方法。当需要访问磁盘中的 page 时，直接向 Buffer Pool 中发起请求，如果要访问的 page 已经存在于 Buffer Pool 中则直接返回，因为 Buffer Pool 是使用内存的，因此速度非常快。若 Buffer Pool 中没有需要的 page 数据，则首先会为要获取的 page 分配存储空间，可能是直接在剩余空闲空间中直接分配，也有可能是将已有的 page 剔除出 Buffer Pool，然后以 page 为单位，从磁盘中进行获取并读入 Buffer Pool，再返回给请求方。</p>
