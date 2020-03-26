@@ -7,10 +7,19 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>cn</language>
     <copyright>&amp;copy; &lt;a href=&#34;https://github.com/iCell&#34;&gt;iCell&lt;/a&gt; 2020</copyright>
-    <lastBuildDate>Tue, 10 Mar 2020 23:55:34 +0900</lastBuildDate>
+    <lastBuildDate>Thu, 26 Mar 2020 22:20:12 +0900</lastBuildDate>
     
 	<atom:link href="https://cspro.xyz/categories/database/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>基于 B&#43; Tree 的索引实现</title>
+      <link>https://cspro.xyz/database/2/</link>
+      <pubDate>Thu, 26 Mar 2020 22:20:12 +0900</pubDate>
+      
+      <guid>https://cspro.xyz/database/2/</guid>
+      <description>&lt;p&gt;大量的数据在磁盘中存储后，如何高效地对部分数据进行检索，此时就必须要用到索引了。就像翻阅一本书时，通过目录就可以定位到要查阅的内容在书中的哪一页，这里的目录就相当于数据库中的索引。如何实现数据库索引，选用怎样的数据结构，直接影响着数据库的查询效率。本文会通过介绍 B Tree 的实现，来引出数据库索引最广泛采用的数据结构 B+ Tree。&lt;/p&gt;</description>
+    </item>
     
     <item>
       <title>数据库中数据的组织形式</title>
