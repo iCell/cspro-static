@@ -7,10 +7,19 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>cn</language>
     <copyright>&amp;copy; &lt;a href=&#34;https://github.com/iCell&#34;&gt;iCell&lt;/a&gt; 2020</copyright>
-    <lastBuildDate>Thu, 26 Mar 2020 22:20:12 +0900</lastBuildDate>
+    <lastBuildDate>Thu, 09 Apr 2020 13:25:10 +0900</lastBuildDate>
     
 	<atom:link href="https://cspro.xyz/categories/database/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>并发下的 B&#43; Tree</title>
+      <link>https://cspro.xyz/database/3/</link>
+      <pubDate>Thu, 09 Apr 2020 13:25:10 +0900</pubDate>
+      
+      <guid>https://cspro.xyz/database/3/</guid>
+      <description>&lt;p&gt;并发度是一个数据库性能极其重要的指标之一，并发下的索引查询、更新表现也直接决定了整个数据库的性能。在上一篇文章中我们介绍了&lt;a href=&#34;http://cspro.xyz/database/2/&#34;&gt;基于 B+ Tree 的索引实现&lt;/a&gt;，在这个较为复杂的数据结构下，单线程的数据更新可能就会带来多个节点的合并或者分裂操作，那么并发情况下针对于 B+ Tree 的查询和更新又要如何进行，本文将基于此问题进行大致的介绍。&lt;/p&gt;</description>
+    </item>
     
     <item>
       <title>基于 B&#43; Tree 的索引实现</title>

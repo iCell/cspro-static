@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="cn" >
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    
+    
+
+    <title>并发下的 B&#43; Tree | CS Pro</title>
+
+    <link rel="stylesheet" href="https://cspro.xyz/css/styles.css">
+
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css"
+        integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.js"
+        integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60=" crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="https://cspro.xyz/js/hj-v9.18.1/styles/zenburn.css">
+    <script src="https://cspro.xyz/js/hj-v9.18.1/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/jquery.jssocials/1.4.0/jssocials.css" />
+    <link type="text/css" rel="stylesheet"
+        href="https://cdn.jsdelivr.net/jquery.jssocials/1.4.0/jssocials-theme-minima.css" />
+    <script type="text/javascript" src="https://cspro.xyz/js/jssocials.js"></script>
+
+    
+<div class="container">
+  <nav class="navbar level">
+    <div class="navbar-brand">
+      <a class="nav-item" href="https://cspro.xyz">
+        <h1 class="title is-3">CS Pro</h1>
+      </a>
+    </div>
+    <div class="navbar-menu has-text-centered is-active">
+      <div class="navbar-end is-centered">
+        
+        <a href="https://github.com/iCell" rel="me">
+          <span class="icon">
+            <i class="fab fa-github"></i>
+          </span>
+        </a>
+        
+        <a href="https://twitter.com/shawn_lee_im" rel="me">
+          <span class="icon">
+            <i class="fab fa-twitter"></i>
+          </span>
+        </a>
+        
+      </div>
+    </div>
+  </nav>
+</div>
+<div class="container">
+  <h2 class="subtitle is-6 publish-date">Apr 9, 2020</h2>
+  <h1 class="subtitle is-size-4-mobile is-size-3-desktop">并发下的 B&#43; Tree</h1>
+  <div class="content">
+    <p>并发度是一个数据库性能极其重要的指标之一，并发下的索引查询、更新表现也直接决定了整个数据库的性能。在上一篇文章中我们介绍了<a href="http://cspro.xyz/database/2/">基于 B+ Tree 的索引实现</a>，在这个较为复杂的数据结构下，单线程的数据更新可能就会带来多个节点的合并或者分裂操作，那么并发情况下针对于 B+ Tree 的查询和更新又要如何进行，本文将基于此问题进行大致的介绍。</p>
+<figure class="full">
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-3-1.png"/> 
+</figure>
+
+<p>上图是一棵 B+ Tree，假设现在有以下两个操作：</p>
+<ul>
+<li>T1 删除 44，也就是要删除图中节点 A 的值；</li>
+<li>T2 查询 41，也就是要定位到节点 B 中的值；</li>
+</ul>
+<p>T1 操作在删除 A 中的 44 之后，为了保持 B+ Tree 的平衡，会将相邻兄弟节点 B 中的 41 “借”过来，如下图所示。</p>
+<figure class="full">
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-3-2.png"/> 
+</figure>
+
+<p>如果 T1 和 T2 是在并发条件下进行的，就有可能出现这种情况，T2 查询到了目标数据在节点 B 中，正准备去 B 中相应位置获取值，此时 T1 触发并完成了 B+ Tree 的再平衡操作，41 所在的节点由 B 变为了 A 节点，此时 T2 再去 B 中获取值，会发现并没有想要的。</p>
+<p>以上情况是很普遍的一种并发问题，解决此问题的方法也很直接，就是加锁。另外，由于数据库中会有 read 和 write 两种操作，且大部分情况下 read 的操作更为频繁，因此为了保持 B+ Tree 在并发下的一致性，我们使用读写锁机制，读写锁具有什么样的特性，这里不再赘述。</p>
+<h3 id="读锁">读锁</h3>
+<p>在 B+ Tree 上获取读锁的方式比较简单，按照如下步骤：</p>
+<ol>
+<li>从根节点开始获取读锁，根据要查询的值进入相应的子节点；</li>
+<li>继续获取子节点的读锁，当成功获取子节点读锁后，释放父节点的读锁；</li>
+<li>依次根据查询的值一致重复步骤 2，直至到达叶子节点查询到相应的值，并释放叶子节点的锁。</li>
+</ol>
+<p>以上的步骤我们结合例子进行理解，还是之前的 B+ Tree，我们这次需要查找 12，也就是按照下图中的 A -&gt; B -&gt; C -&gt; D 的节点顺序依次查找。</p>
+<figure class="full">
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-3-3.png"/> 
+</figure>
+
+<ol>
+<li>首先获取根节点 A 的读锁，然后进入子节点 B；</li>
+<li>获取节点 B 的读锁，不能成功获取则等待尝试再次获取，成功获取后，释放 A 的读锁，进入子节点 C；</li>
+<li>获取节点 C 的读锁，不能成功获取则等待尝试再次获取，成功获取后，释放 B 的读锁，进入叶子节点 D；</li>
+<li>获取叶子节点 D 的读锁，不能成功获取则等待尝试再次获取，成功获取后，释放节点 C 的锁，读取节点中的数据，读取成功后释放 D 的锁，整个操作完成。</li>
+</ol>
+<h3 id="写锁">写锁</h3>
+<p>获取写锁的方式同读锁大有不同，这里涉及到一个概念就是节点是“安全”的，也就意味着节点不会发生合并或者是分裂操作。获取 B+ Tree 的写锁步骤如下：</p>
+<ol>
+<li>从根节点开始，获取写锁，并进入相应的子节点；</li>
+<li>继续在子节点获取写锁，重复此步骤，直到能够确定节点在更新操作下是安全的，即不会发生分裂或者合并行为，紧接着继续持有当前节点的锁，释放所有的父节点写锁；</li>
+<li>继续重复获取写锁，直到更新操作完成，释放锁。</li>
+</ol>
+<p>以上步骤比较难理解，举个例子来说明，如下图所示，我们需要删除其中的值 38：</p>
+<figure class="full">
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-3-4.png"/> 
+</figure>
+
+<p>同样，我们还是按照从图中的节点 A 到 B C 到 D 节点的顺序。按照上述步骤，我们从根节点 A 开始获取读锁，然后到节点 B，在节点 B 中我们并不能判断出删除 38 这个操作会有什么影响，因此继续持有节点 A 和 B 的写锁，然后到达节点 C。</p>
+<figure class="full">
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-3-5.png"/> 
+</figure>
+
+<p>在节点 C 中，我们可以判断出节点 C 就算删除一个元素也仍然满足节点内元素的最少个数要求，并不会引起节点的合并，此时我们可以说节点 C 是“安全”的，因此释放 C 所有的父节点的写锁，也就是释放 A 和 B 的写锁。此时继续到达节点 D，获取节点 D 的写锁，并释放节点 C 的写锁。删除目标值 38 后，释放 D 的写锁，操作完成。</p>
+<p>我们继续举个例子，还是上图中同样的 B+ Tree，这时我们要新增一个数据 45。同样，我们从根节点 A 开始获取写锁，到节点 B 并获取 B 的写锁，此时我们发现节点 B 有多余的空间，也就是说对于这个插入操作来说，就算会触发再平衡操作，B 节点也是有位置存放数据不会进行分裂，因此 B 节点是安全的，所以此时释放 B 的父节点 A 的写锁。</p>
+<figure class="full">
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-3-6.png"/> 
+</figure>
+
+<p>然后到达节点 C 获取 C 的写锁，此时我们无法判断 C 需不需要进行分裂，所以继续持有节点 B 的写锁。然后到达节点 E，获取 E 的写锁，此时发现节点 E 有多余的空间可以容纳新插入的值 45，因此节点 E 是安全的，那么释放 B 和 C 的写锁。然后插入新值，释放 E 的写锁，完成操作。</p>
+<figure class="full">
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-3-7.png"/> 
+</figure>
+
+<h3 id="写锁优化">写锁优化</h3>
+<p>上面介绍了 B+ Tree 如何获取读写锁，我们发现在获取写锁时，有可能会发生从根节点到叶子节点的整个路径全部被锁住了的情况，这样是严重影响并发度的，从而影响整个数据库的性能。那么写锁还有没有优化的空间呢？</p>
+<p>在实际的数据库中，一个 B+ Tree 中的节点大概能容纳几百个元素，也就是说并不会像我们上面举的例子一样频繁地进行节点合并和分裂，我们基于这一点，假设在更新 B+ Tree 的操作中，所有节点都是“安全”的，那么获取写锁的方式就同获取读锁的方式是完全一致的：获取子节点写锁后，释放父节点写锁。</p>
+<p>但是，写锁和读锁是不同的，写锁是完全排他的，而读锁是对读操作共享的。于是，我们可以对写锁进行这样的优化：</p>
+<ol>
+<li>基于所有节点都是“安全”的假设前提下，从根节点开始以<strong>读锁</strong>的方式获取，也就是在根节点 A 中获取读锁，达到子节点 B，成功获取 B 的读锁后释放 A 的读锁，依此往下；</li>
+<li>直到到达叶子节点，此时获取叶子节点的<strong>写锁</strong>，然后进行数据更新；</li>
+<li>此时面临两种情况：
+<ol>
+<li>符合假设，并不会引起节点的合并或者分裂，那么直接更新数据，释放叶子节点的写锁，完成操作；</li>
+<li>不符合假设，会引起节点的合并或者分裂，此时重新开始，fallback 到原本的写锁实现，从根节点开始获取写锁进行数据更新操作。</li>
+</ol>
+</li>
+</ol>
+<h3 id="范围操作">范围操作</h3>
+<p>上述的例子中，我们仅仅是对某一个确定的值进行查询或更新，这样的效果是路径都是单向的，也就是说路径都是从根节点到叶子节点结束，这样的单向获取锁的路径并不会因其死锁的产生。</p>
+<p>但是 B+ Tree 的特点决定了事情并不是这么简单，B+ Tree 的一个很重要的特性是能够在叶子节点中进行顺序遍历操作。比如我们要在 B+ Tree 中进行范围查找，查找 key &lt; 35 的值，如下图所示：</p>
+<figure class="full">
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-3-8.png"/> 
+</figure>
+
+<p>这里是进行查询操作，我们按照上述读锁的步骤进行查询，也就是从 A 开始获取读锁，然后依次获取 C 的读锁后释放 A 的读锁，再在叶子节点中进行遍历获取 B 的读锁后释放 C 的读锁，读取 &lt; 20 的值后释放 B 的读锁完成操作。</p>
+<p>但假设，现在又有一个查询 T2: key &gt; 10 开始了，在进行 T1: key &lt; 35 的查询过程中，T1 已经获取 C 的读锁，尚未获取到 B 的读锁，而 T2 获取到了 B 的读锁，尚未获取到 C 的读锁。</p>
+<figure class="full">
+    <img src="https://cspro.oss-cn-beijing.aliyuncs.com/database-3-9.png"/> 
+</figure>
+
+<p>此时，T1 和 T2 都在等待获取多方已持有的锁，死锁的情况就发生了。可惜的是，没有一个很好的方案能够有效避免这种死锁情况的发生。最有效的解决方法就是超时机制，在等待获取锁等待到了一定时间后，直接放弃，重新开始操作，一般即可解决。</p>
+<h3 id="总结">总结</h3>
+<p>本文作为上一篇关于 B+ Tree 介绍的补充，简单介绍了 B+ Tree 是如何增加读写锁来处理并发下的竞争问题的，另外还提到了如何简单地优化增加写锁的效率，希望读完此文后对 B+ Tree 会有更深的理解。</p>
+<p>参考资料：<a href="https://15445.courses.cs.cmu.edu/fall2019/slides/09-indexconcurrency.pdf">CMU 15-445/645</a></p>
+  </div>
+</div>
+<div class="container has-text-centered">
+    <aside>
+        <div id="share"></div>
+    </aside>
+    <script type="text/javascript">
+        $("#share").jsSocials({
+            showLabel: false,
+            showCount: false,
+            shares: ["email", "twitter", "facebook"]
+        });
+    </script>
+</div>
+<div class="container has-text-centered">
+  
+</div>
+<section class="section">
+  <div class="container has-text-right footer">
+    <p>Powered by <a href="">hugo</a> | Theme is <a href="github.com/iCell/yo-hugo-theme">Yo</a></p>
+    <p>&copy; <a href="https://github.com/iCell">iCell</a> 2020</p>
+  </div>
+</section>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-160190061-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
