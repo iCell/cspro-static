@@ -7,10 +7,19 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>cn</language>
     <copyright>&amp;copy; &lt;a href=&#34;https://github.com/iCell&#34;&gt;iCell&lt;/a&gt; 2020</copyright>
-    <lastBuildDate>Thu, 09 Apr 2020 13:25:10 +0900</lastBuildDate>
+    <lastBuildDate>Tue, 19 May 2020 20:42:10 +0900</lastBuildDate>
     
 	<atom:link href="https://cspro.xyz/categories/database/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>数据是如何查询的：单趟扫描算法</title>
+      <link>https://cspro.xyz/database/4/</link>
+      <pubDate>Tue, 19 May 2020 20:42:10 +0900</pubDate>
+      
+      <guid>https://cspro.xyz/database/4/</guid>
+      <description>&lt;p&gt;之前的几篇文章中，我们介绍了数据库中的数据是如何存储、以怎样的结构组织来便于我们进行数据查找的。当我们在进行数据库操作时，绝大部分情况下都是在以编写 SQL 的方式来进行数据的查询、更新等操作，SQL 为我们在上层抽象出了数据的查询方式，而至于输入 SQL 之后到数据库给出数据之间，数据库其实做了一系列非常复杂的操作，包括解析 SQL 语句（parse）、优化查询（query rewrite）以及最终的执行查询操作（query execute）。&lt;/p&gt;</description>
+    </item>
     
     <item>
       <title>并发下的 B&#43; Tree</title>
